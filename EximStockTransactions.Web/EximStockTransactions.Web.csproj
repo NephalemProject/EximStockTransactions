@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+      <!-- Use the smaller EFIGS data file (~1.5MB) to ensure faster loading. -->
+      <BlazorIcuDataFileName>icudt_EFIGS.dat</BlazorIcuDataFileName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.0" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EximStockTransactions.Domain\EximStockTransactions.Domain.csproj" />
+    <ProjectReference Include="..\EximStockTransactions.Application\EximStockTransactions.Application.csproj" />
+  </ItemGroup>
+</Project>

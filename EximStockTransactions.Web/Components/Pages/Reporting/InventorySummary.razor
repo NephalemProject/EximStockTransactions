@@ -1,0 +1,119 @@
+﻿@page "/inventory-summary"
+@using EximStockTransactions.Web.Services
+@using EximStockTransactions.Application.Services.ItemService
+@inject IApiService ApiService
+@inject NotificationService NotificationService
+
+<PageTitle>Inventory Summary</PageTitle>
+<NotificationToast />
+
+<h3>Inventory Summary</h3>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (allItems == null)
+{
+    <div class="alert alert-warning">
+        Failed to load inventory data. Please try again.
+    </div>
+}
+else
+{
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body text-center p-3">
+                    <h6 class="card-title mb-1">Low Stock Items</h6>
+                    <p class="card-text h4 mb-0">@lowStockCount</p>
+                    <small class="text-light">At or below threshold</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <label>
+        <input type="checkbox" @bind="showOnlyLowStock" /> 
+        Show only low-stock items
+    </label>
+
+    var displayItems = showOnlyLowStock 
+        ? allItems.Where(i => i.OnHandQuantity <= i.LowStockThreshold).ToList()
+        : allItems;
+        
+    var totalValue = displayItems.Sum(i => i.InventoryValue);
+
+    <h4>Total Inventory Value: @totalValue.ToString("C")</h4>
+
+    @if (!displayItems.Any())
+    {
+        <p>No items found.</p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>Name</th>
+                    <th>On-Hand</th>
+                    <th>Unit Price</th>
+                    <th>Inventory Value</th>
+                    <th>Low Stock Threshold</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in displayItems)
+                {
+                    <tr>
+                        <td>@item.SKU</td>
+                        <td>@item.Name</td>
+                        <td>
+                          <span class="@(item.OnHandQuantity <= item.LowStockThreshold ? "text-danger fw-bold" : "")">
+                            @item.OnHandQuantity
+                          </span>
+                        </td>
+                        <td>@item.UnitPrice.ToString("C")</td>
+                        <td>@item.InventoryValue.ToString("C")</td>
+                        <td>@item.LowStockThreshold</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private List<InventorySummaryResponse>? allItems;
+    private bool showOnlyLowStock;
+    private bool isLoading = true;
+    private int lowStockCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInventory();
+    }
+
+    private async Task LoadInventory()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        // Load both the full item list and low stock count
+        var summaryTask = ApiService.GetAsync<InventorySummaryResult>("api/items/summary?lowStockOnly=false");
+        var lowStockTask = ApiService.GetAsync<int>("api/items/low-stock-count");
+
+        await Task.WhenAll(summaryTask, lowStockTask);
+
+        allItems = summaryTask.Result?.Items ?? new List<InventorySummaryResponse>();
+        lowStockCount = lowStockTask.Result;
+
+        isLoading = false;
+        StateHasChanged();
+    }
+}

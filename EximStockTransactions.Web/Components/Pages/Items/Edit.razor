@@ -1,0 +1,109 @@
+﻿@page "/edit/{Id:int}"
+@using EximStockTransactions.Domain.Entities
+@using EximStockTransactions.Web.Components.Elements
+@using EximStockTransactions.Web.Services
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject NotificationService NotificationService
+
+<PageTitle>Edit Item</PageTitle>
+
+<NotificationToast />
+
+<div class="row justify-content-center">
+    <div class="col-6">
+        @if (item is not null)
+        {
+            <EditForm method="post" FormName="EditItemForm" OnValidSubmit="HandleSubmit" Model="item" autocomplete="off">
+                <h3>Edit Item @Id</h3>
+
+                <div class="mb-3">
+                    <label for="sku" class="form-label">SKU</label>
+                    <InputText id="sku" @bind-Value="item.SKU" class="form-control shadow-none" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name</label>
+                    <InputText id="name" @bind-Value="item.Name" class="form-control shadow-none" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="unit-price" class="form-label">Unit Price</label>
+                    <InputNumber id="unit-price" @bind-Value="item.UnitPrice" class="form-control shadow-none" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="low-stock" class="form-label">Low Stock Threshold</label>
+                    <InputNumber id="low-stock" @bind-Value="item.LowStockThreshold" class="form-control shadow-none" />
+                </div>
+
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary shadow-none" disabled="@isSubmitting">
+                        @(isSubmitting ? "Saving..." : "Update")
+                    </button>
+                    <a href="/" class="btn btn-secondary shadow-none ms-3">Back to List</a>
+                </div>
+
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+            </EditForm>
+        }
+        else
+        {
+            <p>Loading item...</p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Item? item;
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            item = await Http.GetFromJsonAsync<Item>($"api/items/{Id}");
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError("Failed to load item.", "Error");
+            Console.WriteLine($"Error loading item: {ex.Message}");
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (item == null) return;
+
+        isSubmitting = true;
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/items/{Id}", item);
+            if (response.IsSuccessStatusCode)
+            {
+                NotificationService.ShowSuccess("Item updated successfully!", "Success");
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                NotificationService.ShowError(error, "Update Failed");
+                Console.WriteLine($"Failed to update item: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError(ex.Message, "Error");
+            Console.WriteLine($"Error updating item: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

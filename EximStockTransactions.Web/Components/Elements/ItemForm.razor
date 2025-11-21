@@ -1,0 +1,132 @@
+﻿@using EximStockTransactions.Domain.Entities
+@using EximStockTransactions.Web.Models
+@using EximStockTransactions.Web.Services
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject NotificationService NotificationService
+
+
+@if (Item is not null)
+{
+    <EditForm method="post" FormName="ItemForm" OnValidSubmit="AddOrEditItem" Model="Item" autocomplete="off">
+        <h3>@Title</h3>
+
+        @if (IsEditMode)
+        {
+            <input type="hidden" name="Item.Id" value="@Item.Id" />
+        }
+
+        <div class="mb-3">
+            <label for="sku" class="form-label">SKU</label>
+            <InputText id="sku" @bind-Value="Item.SKU" class="form-control shadow-none" />
+        </div>
+
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <InputText id="name" @bind-Value="Item.Name" class="form-control shadow-none" />
+        </div>
+
+        <div class="mb-3">
+            <label for="unit-price" class="form-label">Unit Price</label>
+            <InputNumber id="unit-price" @bind-Value="Item.UnitPrice" class="form-control shadow-none" />
+        </div>
+
+        <div class="mb-3">
+            <label for="low-stock" class="form-label">Low Stock Threshold</label>
+            <InputNumber id="low-stock" @bind-Value="Item.LowStockThreshold" class="form-control shadow-none" />
+        </div>
+
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary shadow-none" disabled="@isSubmitting">
+                @(isSubmitting ? "Saving..." : "Submit")
+            </button>
+            <a href="/" class="btn btn-secondary shadow-none ms-3">Back to List</a>
+        </div>
+
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public int ItemId { get; set; }
+
+    [SupplyParameterFromForm]
+    public Item? Item { get; set; }
+
+    [Parameter]
+    public EventCallback<Item> OnValidItemSubmit { get; set; }
+
+    private bool isSubmitting = false;
+
+    private string Title => IsEditMode ? $"Edit Item {ItemId}" : "Add New Item";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+            try
+            {
+                Item ??= await Http.GetFromJsonAsync<Item>($"api/items/{ItemId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading item: {ex.Message}");
+                Navigation.NavigateTo("/");
+            }
+        }
+        else
+        {
+            Item ??= new Item();
+        }
+    }
+
+  private async Task AddOrEditItem()
+  {
+    if (Item == null) return;
+
+    isSubmitting = true;
+
+    try
+    {
+      HttpResponseMessage? response = null;
+
+      if (IsEditMode)
+      {
+        response = await Http.PutAsJsonAsync($"api/items/{Item.Id}", Item);
+      }
+      else
+      {
+        response = await Http.PostAsJsonAsync("api/items", Item);
+      }
+
+      if (response.IsSuccessStatusCode)
+      {
+        NotificationService.ShowSuccess("Item saved successfully!", "Success");
+        await OnValidItemSubmit.InvokeAsync(Item);
+        Navigation.NavigateTo("/");
+      }
+      else
+      {
+        var error = await response.Content.ReadFromJsonAsync<ApiError>();
+        NotificationService.ShowError(
+            error?.Error ?? "An unexpected error occurred.",
+            "Error"
+        );
+      }
+    }
+    catch (Exception ex)
+    {
+      NotificationService.ShowError(ex.Message, "Error");
+    }
+    finally
+    {
+      isSubmitting = false;
+    }
+  }
+
+}

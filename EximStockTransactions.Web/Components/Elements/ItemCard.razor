@@ -1,0 +1,77 @@
+﻿@using EximStockTransactions.Domain.Entities
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<div class="item-card">
+    <div class="item-card-body">
+        <h5>@Item.Name</h5>
+        <p>SKU: @Item.SKU | Price: @Item.UnitPrice.ToString("C") | Low Stock: @Item.LowStockThreshold</p>
+    </div>
+    <div class="actions mt-2">
+        <a href="@($"/edit/{Item.Id}")" class="btn btn-warning shadow-none">
+            Edit
+        </a>
+        <button @onclick="OpenConfirmDialog" class="btn btn-danger shadow-none ms-3">
+            Delete
+        </button>
+    </div>
+</div>
+
+@if (showConfirmDialog)
+{
+    <div class="confirm-dialog-container">
+        <div class="confirm-dialog">
+            <h3>Delete item @Item.Name (SKU: @Item.SKU)?</h3>
+            <div class="d-flex flex-row justify-content-end mt-3">
+                <button @onclick="CancelDelete" class="btn btn-secondary shadow-none">
+                    Cancel
+                </button>
+                <button @onclick="DeleteItem" class="btn btn-danger shadow-none ms-3">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool showConfirmDialog = false;
+
+    [Parameter]
+    public required Item Item { get; set; }
+
+    [Parameter]
+    public EventCallback OnDeleted { get; set; }
+
+    private void OpenConfirmDialog()
+    {
+        showConfirmDialog = true;
+    }
+
+    private void CancelDelete()
+    {
+        showConfirmDialog = false;
+    }
+
+    private async Task DeleteItem()
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/items/{Item.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                showConfirmDialog = false;
+                await OnDeleted.InvokeAsync();
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                Console.WriteLine($"Delete failed: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+}

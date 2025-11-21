@@ -1,0 +1,61 @@
+﻿@page "/transactions/{ItemId:int}"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject NotificationService NotificationService
+@using EximStockTransactions.Domain.Entities
+@using EximStockTransactions.Web.Services
+
+<PageTitle>Transaction History</PageTitle>
+
+<h3>Transaction History</h3>
+
+@if (transactions == null)
+{
+  <p>Loading...</p>
+}
+else if (!transactions.Any())
+{
+  <p>No transactions recorded.</p>
+}
+else
+{
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Quantity</th>
+        <th>Comment</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach (var t in transactions)
+      {
+        <tr>
+          <td>@t.Timestamp.ToLocalTime()</td>
+          <td>@t.QuantityChange</td>
+          <td>@t.Comment</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}
+
+<NotificationToast />
+
+@code {
+  [Parameter] public int ItemId { get; set; }
+  private List<StockTransaction>? transactions;
+
+  protected override async Task OnInitializedAsync()
+  {
+    try
+    {
+      transactions = await Http.GetFromJsonAsync<List<StockTransaction>>($"api/stocktransactions/item/{ItemId}");
+    }
+    catch (Exception ex)
+    {
+      NotificationService.ShowError("Failed to load transaction history.", "Error");
+      Navigation.NavigateTo("/");
+    }
+  }
+}

@@ -1,0 +1,189 @@
+﻿@page "/"
+@using EximStockTransactions.Domain.Entities
+@using System.Globalization
+@using EximStockTransactions.Web.Components.Elements
+@using EximStockTransactions.Web.Services
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject NotificationService NotificationService
+
+<PageTitle>Item List</PageTitle>
+
+<NotificationToast />
+
+<div class="row justify-content-center">
+    <div class="col-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Inventory</h2>
+            <a href="add-item" class="btn btn-primary shadow-none">
+                Add New Item
+            </a>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-3">
+            <input type="text"
+                   @bind="searchQuery"
+                   @bind:event="oninput"
+                   placeholder="Search by SKU or name..."
+                   class="form-control shadow-none" />
+        </div>
+
+        <!-- Items Display -->
+        @if (items is null)
+        {
+            <div class="alert alert-info">
+                Loading items. Please wait...
+            </div>
+        }
+        else if (filteredItems.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Name</th>
+                            <th>Unit Price</th>
+                            <th>On-Hand Qty</th>
+                            <th>Low Stock Threshold</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in filteredItems)
+                        {
+                            <tr>
+                                <td>@item.SKU</td>
+                                <td>@item.Name</td>
+                                <td>@item.UnitPrice.ToString("C", CultureInfo.GetCultureInfo("en-ZA"))</td>
+                                <td>
+                                    <span class="@(item.OnHandQuantity <= item.LowStockThreshold ? "text-danger fw-bold" : "")">
+                                        @item.OnHandQuantity
+                                    </span>
+                                </td>
+                                <td>@item.LowStockThreshold</td>
+                                <td>
+                                    <a href="@($"/edit/{item.Id}")" class="btn btn-sm btn-warning shadow-none">
+                                        Edit
+                                    </a>
+                                    <a href="@($"/transaction/{item.Id}")" class="btn btn-sm btn-success shadow-none ms-2">
+                                        Record Transaction
+                                    </a>
+                                    <a href="@($"/transactions/{item.Id}")" class="btn btn-sm btn-info shadow-none ms-2">
+                                        View History
+                                    </a>
+                                    <button @onclick="() => OpenDeleteDialog(item)" class="btn btn-sm btn-danger shadow-none ms-2">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning">
+                @if (string.IsNullOrEmpty(searchQuery))
+                {
+                    <p>No items found. <a href="add-item">Add your first item</a></p>
+                }
+                else
+                {
+                    <p>No items match "@searchQuery"</p>
+                }
+            </div>
+        }
+
+        <!-- Delete Confirmation Dialog -->
+        @if (showDeleteDialog && itemToDelete is not null)
+        {
+            <div class="confirm-dialog-container">
+                <div class="confirm-dialog">
+                    <h3>Delete item @itemToDelete.Name (SKU: @itemToDelete.SKU)?</h3>
+                    <div class="d-flex flex-row justify-content-end mt-3">
+                        <button @onclick="CancelDelete" class="btn btn-secondary shadow-none">
+                            Cancel
+                        </button>
+                        <button @onclick="ConfirmDelete" class="btn btn-danger shadow-none ms-3">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<Item>? items;
+    private string searchQuery = "";
+    private bool showDeleteDialog = false;
+    private Item? itemToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadItems();
+    }
+
+    private async Task LoadItems()
+    {
+        try
+        {
+            items = await Http.GetFromJsonAsync<List<Item>>("api/items");
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError("Failed to load items.", "Error");
+            Console.Error.WriteLine($"Error loading items: {ex.Message}");
+            items = new List<Item>();
+        }
+    }
+
+    private List<Item> filteredItems => items?.Where(i =>
+        string.IsNullOrWhiteSpace(searchQuery) ||
+        i.SKU.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+        i.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
+    ).ToList() ?? new List<Item>();
+
+    private void OpenDeleteDialog(Item item)
+    {
+        itemToDelete = item;
+        showDeleteDialog = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteDialog = false;
+        itemToDelete = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (itemToDelete == null) return;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/items/{itemToDelete.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                NotificationService.ShowSuccess($"Item {itemToDelete.Name} deleted.", "Deleted");
+                showDeleteDialog = false;
+                itemToDelete = null;
+                await LoadItems();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                NotificationService.ShowError(error, "Delete Failed");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError(ex.Message, "Error");
+            Console.WriteLine($"Error deleting item: {ex.Message}");
+        }
+    }
+}

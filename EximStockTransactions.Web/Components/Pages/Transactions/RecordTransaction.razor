@@ -1,0 +1,117 @@
+﻿@page "/transaction/{ItemId:int}"
+@using EximStockTransactions.Application.Services.StockTransactionService
+@using EximStockTransactions.Domain.Entities
+@using EximStockTransactions.Web.Services
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject NotificationService NotificationService
+
+<PageTitle>Record Stock Transaction</PageTitle>
+
+<NotificationToast />
+
+<div class="row justify-content-center">
+  <div class="col-6">
+    @if (item is not null)
+    {
+      <EditForm Model="transactionRequest" OnValidSubmit="HandleSubmit">
+        <h3>Record Transaction for @item.Name (@item.SKU)</h3>
+
+        <div class="mb-3">
+          <label for="quantity" class="form-label">Quantity Change</label>
+          <InputNumber id="quantity" @bind-Value="transactionRequest.QuantityChange" class="form-control shadow-none" />
+          <small class="text-muted">Use negative number to reduce stock</small>
+        </div>
+
+        <div class="mb-3">
+          <label for="comment" class="form-label">Comment / Reference</label>
+          <InputText id="comment" @bind-Value="transactionRequest.Comment" class="form-control shadow-none" />
+        </div>
+
+        <div class="mb-3">
+          <button type="submit" class="btn btn-primary shadow-none" disabled="@isSubmitting">
+            @(isSubmitting ? "Saving..." : "Record Transaction")
+          </button>
+          <a href="/" class="btn btn-secondary shadow-none ms-3">Back to List</a>
+        </div>
+
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+      </EditForm>
+    }
+    else
+    {
+      <p>Loading item...</p>
+    }
+  </div>
+</div>
+
+@code {
+  [Parameter] public int ItemId { get; set; }
+
+  private Item? item;
+  private RecordStockTransactionRequest transactionRequest = new RecordStockTransactionRequest();
+  private bool isSubmitting = false;
+
+  protected override async Task OnInitializedAsync()
+  {
+    try
+    {
+      item = await Http.GetFromJsonAsync<Item>($"api/items/{ItemId}");
+      transactionRequest.ItemId = ItemId;
+    }
+    catch (Exception ex)
+    {
+      NotificationService.ShowError("Failed to load item data.", "Error");
+      Console.WriteLine(ex.Message);
+      Navigation.NavigateTo("/");
+    }
+  }
+
+  private async Task HandleSubmit()
+  {
+    if (transactionRequest.QuantityChange == 0)
+    {
+      NotificationService.ShowWarning("Quantity cannot be zero.", "Warning");
+      return;
+    }
+
+    isSubmitting = true;
+
+    try
+    {
+      var response = await Http.PostAsJsonAsync("api/stocktransactions", transactionRequest);
+
+      if (response.IsSuccessStatusCode)
+      {
+        NotificationService.ShowSuccess("Transaction recorded successfully!", "Success");
+        Navigation.NavigateTo($"/transactions/{ItemId}");
+      }
+      else
+      {
+        // Try to parse JSON error if backend returns structured message
+        try
+        {
+          var errorObj = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+          var message = errorObj?["error"] ?? "An unexpected error occurred.";
+          NotificationService.ShowError(message, "Error");
+        }
+        catch
+        {
+          // fallback to raw text
+          var rawError = await response.Content.ReadAsStringAsync();
+          NotificationService.ShowError(rawError, "Error");
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      NotificationService.ShowError(ex.Message, "Error");
+      Console.WriteLine($"Exception: {ex.Message}");
+    }
+    finally
+    {
+      isSubmitting = false;
+    }
+  }
+}
