@@ -1,8 +1,8 @@
-﻿using EximStockTransactions.Domain.Entities;
-using EximStockTransactions.Domain.Models;
-
-namespace EximStockTransactions.Application.Interfaces
+﻿namespace EximStockTransactions.Domain.Interfaces
 {
+  using EximStockTransactions.Domain.Entities;
+  using EximStockTransactions.Domain.Models;
+
   public interface IItemRepository
   {
     Task<List<Item>> GetAllAsync();

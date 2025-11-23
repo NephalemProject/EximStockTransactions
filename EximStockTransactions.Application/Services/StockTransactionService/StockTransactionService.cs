@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using EximStockTransactions.Application.Interfaces;
 using EximStockTransactions.Application.Services.StockTransactionService;
+using EximStockTransactions.Domain.Interfaces;
 using EximStockTransactions.Domain.Entities;
 
 public class StockTransactionService : IStockTransactionService

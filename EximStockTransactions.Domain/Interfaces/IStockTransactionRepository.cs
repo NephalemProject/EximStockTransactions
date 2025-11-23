@@ -1,4 +1,4 @@
-﻿namespace EximStockTransactions.Application.Interfaces
+﻿namespace EximStockTransactions.Domain.Interfaces
 {
   using EximStockTransactions.Domain.Entities;
 

@@ -1,7 +1,7 @@
 ﻿namespace EximStockTransactions.Infrastructure.Repositories
 {
   using Microsoft.EntityFrameworkCore;
-  using EximStockTransactions.Application.Interfaces;
+  using EximStockTransactions.Domain.Interfaces;
   using EximStockTransactions.Domain.Entities;
   using EximStockTransactions.Domain.Models;
   using EximStockTransactions.Infrastructure.Context;

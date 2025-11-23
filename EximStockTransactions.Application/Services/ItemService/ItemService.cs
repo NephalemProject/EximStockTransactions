@@ -2,8 +2,9 @@
 {
   using Microsoft.Extensions.Logging;
   using EximStockTransactions.Application.Interfaces;
-  using EximStockTransactions.Domain.Entities;
   using EximStockTransactions.Application.Helpers;
+  using EximStockTransactions.Domain.Interfaces;
+  using EximStockTransactions.Domain.Entities;
 
   public class ItemService : IItemService
   {

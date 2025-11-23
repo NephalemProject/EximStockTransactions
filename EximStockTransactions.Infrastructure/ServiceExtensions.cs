@@ -3,7 +3,7 @@
   using Microsoft.EntityFrameworkCore;
   using Microsoft.Extensions.Configuration;
   using Microsoft.Extensions.DependencyInjection;
-  using EximStockTransactions.Application.Interfaces;
+  using EximStockTransactions.Domain.Interfaces;
   using EximStockTransactions.Infrastructure.Context;
   using EximStockTransactions.Infrastructure.Repositories;
 

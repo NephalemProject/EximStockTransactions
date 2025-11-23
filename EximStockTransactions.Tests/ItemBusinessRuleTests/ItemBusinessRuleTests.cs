@@ -1,6 +1,6 @@
 ﻿namespace EximStockTransactions.Tests 
 {
-  using EximStockTransactions.Application.Interfaces;
+  using EximStockTransactions.Domain.Interfaces;
   using EximStockTransactions.Application.Services.ItemService;
   using EximStockTransactions.Domain.Entities;
   using Microsoft.Extensions.Logging;
