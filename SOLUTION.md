@@ -19,17 +19,20 @@ This project follows Clean Architecture principles, separating concerns across l
 
 #### Application Layer
 
-- Contains service interfaces (_IItemRepository_, _IStockTransactionService_) and orchestrates use cases.  
-- Handles business logic and ensures validation before persisting data.
+- Contains service interfaces (IItemService, IStockTransactionService) and orchestrates use cases.
+- Contains DTOs (Data Transfer Objects) for API requests and responses.
+- Handles workflow orchestration, coordinating between domain logic and infrastructure.
 
 #### Domain Layer
 
 - Contains core business entities (_Item_, _StockTransaction_) as C# classes.
+- Contains repository interfaces (IItemRepository, IStockTransactionRepository) that define data access contracts.
 
 #### Infrastructure Layer
 
 - Implements repository interfaces using EF Core and SQLite.  
 - Handles external dependencies like databases and logging.
+- Contains concrete implementations of domain repository interfaces.
 
 ### Blazor WASM Front-End
 
@@ -53,10 +56,13 @@ The front-end project is a Blazor WebAssembly (WASM) application that interacts 
 
 ### Key Design Decisions
 
-#### Repository Interfaces in Application Layer
+#### Separation of Interfaces by Layer
 
-- Keeps Domain and Application decoupled from Infrastructure.  
-- Allows swapping database implementations without changing business logic.
+- Repository interfaces reside in the Domain layer, keeping the domain independent of infrastructure concerns.
+- Service interfaces reside in the Application layer, defining use case orchestration contracts.
+- Repository implementations are in the Infrastructure layer.
+- Service implementations are in the Application layer.
+- This follows Clean Architecture's Dependency Rule: dependencies point inward toward the domain.
 
 #### Exception Middleware
 
